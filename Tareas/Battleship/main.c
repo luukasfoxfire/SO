@@ -37,6 +37,7 @@ void createTable(){
     printf("We are done? ._. \nYou are welcome... \n");
 }
 
+//Funcion para limpiar la memoria compartida de la tabla Player (Hay 2 de estas)
 void cleaningTableTops(TableTop *Player){
     for (int i = 0; i < 5; i++) {
         for (int x = 0; x < 5; x++) {
@@ -49,14 +50,77 @@ void cleaningTableTops(TableTop *Player){
     }
 }
 
-void positionBoats(pid_t pid){
+
+
+//Funcion para posicionar los barcos
+void positionBoats(pid_t pid, TableTop* Player1, TableTop* Player2){
+
+    char *FileOfShips[] = {"AircraftCarrier.ship", "Cruiser.ship", "Destroyer.ship", "Frigate.ship", "Corvette.ship"};
+    char *NameOfShips[] = {"Aircraft Carrier", "Cruiser", "Destroyer", "Frigate", "Corvette"};    //Tipos de barcos de guerra
+    char *player;
+    char coordinates[3] = "A1";
+    char Letters[] = "ABCDE";
+    char Path[50];
+
+    TableTop* ptr;
     if (pid == 0) {
-        printf("Positioning boats for Player 1\n");
+        ptr = Player1;
+        player = "Player1";
     } else {
-        printf("Positioning boats for Player 2\n");
+        ptr = Player2;
+        player = "Player2";
+    }
+
+    char ReviewInput[3], Buff;
+
+    int ValidFlag, InsertedFlag, Column, Row;
+
+    for (int i = 0; i < 5; i++) {
+        while (1) {
+            while ( (Buff != '\n') && (Buff != EOF) ) Buff = getchar();
+            ValidFlag = 0;
+            InsertedFlag = 0;
+            printf("Please %s, tell me the coordinates for your warships like this: 'A1'\n", player);
+            printf("Coordinates for your %s: \n", NameOfShips[i]);
+
+            fgets(coordinates, 3, stdin);
+
+            for (int ReviewLetters = 0; ReviewLetters < 5; ReviewLetters++) {
+                for (int ReviewNumbers = 1; ReviewNumbers <= 5; ReviewNumbers++) {
+                    sprintf(ReviewInput, "%c%d", Letters[ReviewLetters], ReviewNumbers);
+                    if (strcmp(coordinates, ReviewInput) == 0) {
+                        ValidFlag = 1;
+                        Column = ReviewLetters;
+                        Row = ReviewNumbers;
+                        break;
+                    }
+                }
+            }
+            if (ValidFlag == 0) {
+                printf("Error, invalid coordinates, try again. \n");
+            } else {
+                if (ptr->gridForShips[Column][Row] == 1) {
+                    printf("Already used those coordinates, try again. \n");
+                } else {
+                    ptr->gridForShips[Column][Row] = 1;
+                    InsertedFlag = 1;
+                    sprintf(Path, "Game/%s/%c_%d/%s", player, Letters[Column], Row, FileOfShips[i]);
+                    FILE *fp = fopen(Path, "ab+");
+                    printf("Done with the %s\n \n", NameOfShips[i]);
+                }
+            }
+            if (InsertedFlag == 1) {
+                break;
+            }
+        }
+
+
+
     }
 }
 
+
+//Main
 int main(int argc, char const *argv[]) {
     char players;
 
@@ -67,12 +131,14 @@ int main(int argc, char const *argv[]) {
     printf("0 for exit. \n");
     fgets(&players, 2, stdin);
 
+
     while (strcmp(&players, "2") != 0) {
         if (strcmp(&players, "0") == 0) {
             printf("Welp, byebye\n");
-            return 1;
+            return 0;
         }
-        printf("That's not a valid answer. \nPlease press '2'.\n");
+        printf("That's not a valid answer. \nPlease press '2' or '0'.\n");
+
         fgets(&players, 2, stdin);
 
     }
@@ -93,19 +159,42 @@ int main(int argc, char const *argv[]) {
     pid = fork();
 
     int PipeForPlayer1[2], PipeForPlayer2[2];
+    int WhoPlays[1];
 
     pipe(PipeForPlayer1);
     pipe(PipeForPlayer2);
 
-    if (pid == 0) {
-        printf("Child working fine\n");
-        printf("Value of A_1: %d\n", Player1->gridForShips[0][0]);
-    } else {
-        printf("Parent working fine too\n");
-        printf("Value of A_1: %d\n", Player2->gridForShips[0][0]);
+    if (pid == 0){
+        close(PipeForPlayer1[1]);
+        close(PipeForPlayer2[0]);
+        write(PipeForPlayer2[1], "0", 1);
+    } else{
+        close(PipeForPlayer2[1]);
+        close(PipeForPlayer1[0]);
     }
 
-    positionBoats(pid);
+    if (pid > 0){
+        read(PipeForPlayer2[0],WhoPlays,1);
+        if (WhoPlays[0] == '0'){
+            positionBoats(pid, Player1, Player2);
+            write(PipeForPlayer1[1], "1", 1);
+        }
+    }
+    else{
+        read(PipeForPlayer1[0],WhoPlays,1);
+        if (WhoPlays[0] == '1'){
+            positionBoats(pid, Player1, Player2);
+            write(PipeForPlayer2[1], "0", 1);
+        }
+    }
+
+
+    //Bueno, no funciona, ni con ningun ejemplo encontrado en google ni en moodle ni en ningun lado, pero aqui esta la funcion
+
+
+    if (pid > 0) {
+        positionBoats(pid, Player1, Player2);
+    }
 
     return 0;
 }
