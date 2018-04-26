@@ -18,16 +18,16 @@ else{
 }
 
 if(pid>0){
-    read(PipeForPlayer2[0],control,1);
-    if(control[0]=='0'){
-        //printf("turno %c\n",control[0]);
+    read(PipeForPlayer2[0],Turno,1);
+    if(Turno[0]=='0'){
+        //printf("turno %c\n",Turno[0]);
     write(PipeForPlayer1[1],"1",1);
     }
 }
 else{
-    read(PipeForPlayer1[0],control,1);
-    if(control[0]== '1'){
-        //printf("turno %c\n",control[0]);
+    read(PipeForPlayer1[0],Turno,1);
+    if(Turno[0]== '1'){
+        //printf("turno %c\n",Turno[0]);
         write(PipeForPlayer2[1],"0",1);
     }
 }
